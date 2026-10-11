@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#141a17"><meta name="description" content="A camera-only vibration experiment. Silent video capture with timed tones and local exports.">
+  <title>Camera Signal — micwithoutmic</title>
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="camera.css">
+  <script src="camera-core.js" defer></script><script src="camera.js" defer></script>
+</head>
+<body><main>
+  <header><a class="wordmark" href="./"><span class="mark" aria-hidden="true">≋</span> TABLE SIGNAL</a><span class="edition">EXPERIMENT 004</span></header>
+  <section class="intro"><p class="eyebrow">MICWITHOUTMIC / CAMERA STUDY</p><h1>See the<br><em>vibration.</em></h1><p class="lede">Record silent video while a known sound plays. Compare with a muted run.</p></section>
+  <nav class="mode-tabs" aria-label="Experiments"><a href="./">Motion tests</a><a href="camera.html" aria-current="page">Camera test</a></nav>
+  <section class="camera-setup">
+    <div class="section-line"><h2>Camera on. Microphone off.</h2><span class="saved-tag">VIDEO ONLY</span></div>
+    <p class="setup-copy">A camera can carry tiny image changes caused by vibration. This pilot saves the video for analysis; it does not recover sound or words. Only camera permission is requested.</p>
+    <div class="form-grid">
+      <label>Sound source<select id="camera-source"><option value="phone">This iPhone’s speaker · automatic</option><option value="external">External speaker · manual playback</option></select></label>
+      <label>Recording role<select id="camera-role"><option value="sound">Sound on</option><option value="muted">Muted control</option></select></label>
+      <label>Preferred video quality<select id="camera-quality"><option value="4k">4K / 60 fps · if available</option><option value="1080">1080p / 60 fps · smaller file</option></select></label>
+      <label>Volume / setup note<input id="camera-note" type="text" maxlength="200" placeholder="e.g. 70%, phone flat on wooden table"></label>
+    </div>
+    <div id="external-help" hidden><p class="note">Record for 100 seconds. At recording time 10 seconds, start the 80-second tone track on another device through your speaker. For the muted run, mute that playback device. Keep the speaker and phone on the same table, 5 cm apart.</p><div class="setup-actions"><a href="camera-player.html" target="_blank" rel="noopener">Open tone player on the other device ↗</a><a href="camera-tone-check.wav" download>Download tone track ↓</a></div></div>
+    <p id="camera-plan" class="note">80 seconds: 10s quiet → two tone cycles with pauses → 10s quiet. Tones play automatically from this device; confirm it is using the iPhone speaker.</p>
+  </section>
+  <section class="instrument camera-instrument" aria-label="Camera recorder">
+    <div class="instrument-top"><span id="camera-status" class="status" role="status">● CAMERA OFF</span><span id="camera-clock">00:00</span></div>
+    <div class="camera-view"><video id="camera-preview" autoplay playsinline muted aria-label="Live camera preview"></video><div id="camera-empty">Frame a still scene with clear edges.</div><div class="camera-reticle" aria-hidden="true"></div></div>
+    <div class="metrics"><div><span class="label">REPORTED FORMAT</span><strong id="camera-format">—</strong></div><div><span class="label">PREVIEW DELIVERY*</span><strong id="camera-fps">— <small>fps</small></strong></div><div><span class="label">AUDIO TRACKS</span><strong id="camera-audio">0</strong></div></div>
+    <p id="camera-phase" class="camera-phase" role="status">Enable the rear camera, then position the phone.</p>
+    <div class="actions"><button id="camera-enable" class="primary">Enable camera only ↗</button><button id="camera-start" class="primary" disabled>Start sound-on test ●</button><button id="camera-stop" class="stop" hidden>Stop &amp; keep partial video ■</button></div>
+    <div class="setup-actions camera-secondary"><button id="camera-check" disabled>Check sound output</button><button id="camera-disable" disabled>Turn camera off</button></div>
+    <p id="camera-message" class="message" role="status">Open in iPhone Safari. Allow camera access. No microphone request is made.</p>
+  </section>
+  <section id="camera-result" class="saved-panel" hidden>
+    <div class="section-line"><h2>Your silent recording</h2><span class="saved-tag">LOCAL / NOT UPLOADED</span></div>
+    <p id="camera-summary" class="setup-copy"></p><video id="camera-playback" controls playsinline muted aria-label="Recorded silent video"></video>
+    <div class="exports"><button id="camera-share-video">Share video ↗</button><button id="camera-share-report">Share settings JSON ↗</button></div>
+    <div class="setup-actions"><a id="camera-download-video" download>Save video ↓</a><a id="camera-download-report" download>Save settings JSON ↓</a></div>
+    <p id="camera-export-message" class="note" role="status">Save both files before starting another run. The video is held in this tab only; reloading will lose it.</p>
+    <button id="camera-new" class="text-button">New recording · clears this video from the tab</button>
+  </section>
+  <section class="test-panel">
+    <div class="section-line"><h2>How to test on your iPhone</h2><span class="saved-tag">TWO RUNS</span></div>
+    <ol class="camera-steps">
+      <li><b>01</b><div><h3>Choose this iPhone’s speaker.</h3><p>Disconnect headphones and Bluetooth audio. Set a comfortable volume and keep it fixed for both runs. Start with Sound on and 4K preferred.</p></div></li>
+      <li><b>02</b><div><h3>Frame a bright, still scene.</h3><p>Enable camera only. Use crisp edges or texture, such as printed text, a shelf, or a patterned ceiling. Daylight works well; avoid filming a light bulb or blank wall. Rest the phone securely with its rear camera unobstructed. Do not hold it. A phone laid screen-down can point its rear camera toward the ceiling.</p></div></li>
+      <li><b>03</b><div><h3>Start, then hands off.</h3><p>Tap Start. A 5-second countdown gives you time to set the phone down. Recording then runs for 80 seconds, with automatic tones after 10 seconds. Keep this page in the foreground and the screen awake.</p></div></li>
+      <li><b>04</b><div><h3>Save video and settings.</h3><p>The video has no audio track. Use Share or Save for both files. Preserve the original video file, without messaging-app compression.</p></div></li>
+      <li><b>05</b><div><h3>Repeat with Muted control.</h3><p>Tap New recording, choose Muted control, and enable the camera again. Repeat with the same quality, position, scene, light, and system volume. The app silences the tone output for you. Save both files again.</p></div></li>
+    </ol>
+  </section>
+  <details><summary>What this experiment can tell us <span aria-hidden="true">+</span></summary><div class="details-copy"><p>This is a recording pilot inspired by camera acoustic-sensitivity research. It does not implement Side Eye’s signal extraction or classifier. A flat-looking preview cannot rule out tiny image changes. Exported videos are compared with the known tone schedule and muted control before attempting words.</p><p>The browser requests a rear-facing camera, 4K or 1080p, and up to 60 fps. Delivered settings can differ. The camera label is shown where available; Safari may select a different rear lens. * Preview delivery measures displayed frame callbacks, not the sensor’s row timing or guaranteed encoded-video frame rate. No claims about rolling-shutter frequency are made.</p><p>Where exposed, focus and exposure are requested in manual mode with current values, and electronic stabilization is requested off. Safari may hide or reject those controls. Browser APIs cannot guarantee that optical stabilization is off. The report records capabilities, attempted controls, actual settings, callback timing, tone timing, and any interruption. Video is compressed; the bitrate is requested, not guaranteed.</p><p>No microphone track is requested, mixed, or recorded. Tone playback is output only. No speech recognition API, server upload, or analytics is used. Videos and reports remain local until you share or download them. If you leave the tab, the camera ends, or the file limit is reached, the partial video is retained while this page stays open.</p><p>Keep both original videos and both JSON reports. A native recorder may be needed if browser camera controls or compression obscure the effect. Speech recovery on your iPhone remains unproven.</p><p>Research: <a href="https://www.cise.ufl.edu/~butler/pubs/oakland23-sideeye.pdf" target="_blank" rel="noopener">Side Eye, IEEE Security &amp; Privacy 2023 ↗</a></p></div></details>
+  <footer><span>TABLE SIGNAL / CAMERA STUDY</span><span>Camera access only. No installation.</span></footer>
+</main></body></html>

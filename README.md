@@ -4,6 +4,22 @@ Record table and loudspeaker vibrations using your iPhone's motion sensors.
 
 **[Try the live demo](https://table-signal.vercel.app)**
 
+**New: [camera-only test — Experiment 004](https://table-signal.vercel.app/camera.html).** No installation or Xcode needed. Safari requests the rear camera with `audio: false`; the recorder receives exactly one live video track and zero audio tracks. Vercel also sends `Permissions-Policy: camera=(self), microphone=()` to disable microphone access. The phone can play known tones through its speaker while recording silent camera video.
+
+### Camera test on an iPhone
+
+1. Open the camera test in **Safari**. Disconnect Bluetooth speakers/headphones. Select **This iPhone's speaker**, **Sound-on test**, and **4K preferred**. Set system volume around 70% and leave it unchanged for both runs.
+2. Tap **Enable camera only** and allow camera access. Tap **Check sound output** to confirm the tone comes from the iPhone's speaker.
+3. Aim the rear camera at a bright, stationary scene with sharp detail (printed text, tile edges, or a ceiling pattern). Rest the phone securely, without holding it. A screen-down phone with its rear camera facing a patterned ceiling can work. Avoid a blank or dark scene, moving objects, and flickering lighting.
+4. Tap **Start sound-on test**. Position the phone during the 5-second countdown, then keep your hands off. Recording lasts 80 seconds: 10 seconds quiet, two cycles of six tone bursts, then a final quiet interval. Leave Safari visible and the screen unlocked. If recording fails, retry with **1080p preferred**.
+5. Save **both the original video and its paired JSON report** through their Share/Save controls. The video is held in this tab only; reloading or starting a new run loses it.
+6. Tap **New recording**, choose **Muted control**, enable the camera, and repeat with the same scene, phone position, and system volume. The app silences its own tone output. Save both files again: four files total.
+
+External-speaker mode is optional. Open `/camera-player.html` on the other device, keep its speaker and the phone on the same table, record for 100 seconds, and start the 80-second external track at recording time 10 seconds. Keep the playback device on a separate surface. For the muted control, mute external playback yourself; the app cannot control that device.
+
+This is a feasibility capture, **not a speech decoder**. Camera research exploits tiny lens movements and rolling-shutter image distortions; we do not yet know whether this iPhone/Safari combination preserves a usable signal. The app exports reported settings, exposed control attempts, and preview callback timing. These are not proof of the encoded frame rate, row timing, or stabilization being off. Compression and automatic camera processing may remove the signal. Known tones test for a detectable response before attempting words. Videos stay local until you choose to share them. Automated tests simulate recording lifecycle and privacy boundaries; physical iPhone capture still needs your test.
+
+
 **New: [native iPhone sensor lab — Experiment 003](native/README.md).** After the browser tests showed weak speaker signals at about 60 readings/second, the native experiment adds raw magnetometer capture, independent Core Motion streams, measured sensor rates, and playback inside the app. Open `native/TableSignalNative.xcodeproj` in Xcode to install on your iPhone. It is an experiment, not a working speech decoder.
 
 The demo interface is called **Table Signal**. It is a standalone, buildless web app for iPhone Safari, made with plain HTML, CSS, and JavaScript. Host the `dist/` folder on any HTTPS static host. Vercel configuration is included.
@@ -19,7 +35,7 @@ The demo interface is called **Table Signal**. It is a standalone, buildless web
 
 The original 45-second tapping experiment is available under **Table taps**.
 
-Recordings and loaded audio stay in this browser. There is no sensor upload, telemetry, microphone, camera, or accessibility access. The latest session and the most recent 8 speaker runs are retained in IndexedDB when storage is available. The original audio bytes are not included in exports or retained after reloading; exports include a SHA-256 file identity, duration, reference loudness envelope, and optional reference transcript. Export for permanent retention. Recordings from a different domain stay with that domain.
+Recordings and loaded audio stay in this browser. There is no sensor upload, telemetry, microphone, or accessibility access. The motion pages do not access the camera; the separate camera test requests camera permission only. The latest session and the most recent 8 speaker runs are retained in IndexedDB when storage is available. The original audio bytes are not included in exports or retained after reloading; exports include a SHA-256 file identity, duration, reference loudness envelope, and optional reference transcript. Export for permanent retention. Recordings from a different domain stay with that domain.
 
 ## Speaker signal report
 
