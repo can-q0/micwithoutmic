@@ -8,22 +8,39 @@
   <title>Table Signal — vibration recorder</title>
   <link rel="stylesheet" href="style.css">
   <script src="signal.js" defer></script>
+  <script src="experiment.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="speaker-ui.js" defer></script>
 </head>
 <body>
 <main>
-  <header><a class="wordmark" href="./" aria-label="Table Signal home"><span class="mark" aria-hidden="true">≋</span> TABLE SIGNAL</a><span class="edition">EXPERIMENT 001</span></header>
-  <section class="intro"><p class="eyebrow">YOUR TABLE. YOUR PHONE. THE SIGNAL BETWEEN.</p><h1>Feel it.<br><em>Measure it.</em></h1><p class="lede">Put your phone on the table. Record the movement that reaches it.</p></section>
+  <header><a class="wordmark" href="./" aria-label="Table Signal home"><span class="mark" aria-hidden="true">≋</span> TABLE SIGNAL</a><span class="edition">EXPERIMENT 002</span></header>
+  <section class="intro"><p class="eyebrow">MICWITHOUTMIC / SPEAKER STUDY</p><h1>Sound moves.<br><em>Catch the trace.</em></h1><p class="lede">Play a known sound. Measure the vibrations that reach your phone.</p></section>
+  <nav class="mode-tabs" aria-label="Experiment type"><button id="mode-speaker" aria-pressed="true">Speaker experiment</button><button id="mode-taps" aria-pressed="false">Table taps</button></nav>
+  <section id="speaker-setup" class="speaker-setup" aria-label="Speaker experiment setup">
+    <div class="section-line"><h2>One sound. Two surfaces.</h2><span class="saved-tag">10s QUIET → PLAY → 10s QUIET</span></div>
+    <p class="setup-copy">Connect your iPhone to a Bluetooth speaker before starting. First place both on the same table. Repeat with the speaker on a separate surface, keeping its distance and volume the same.</p>
+    <div class="form-grid">
+      <label>Sound to play<select id="stimulus-kind"><option value="tones">Calibration tones · 20 seconds</option><option value="file">My speech recording</option></select></label>
+      <label>Speaker placement<select id="speaker-placement"><option value="same-table">Bluetooth speaker · same table</option><option value="separate-surface">Bluetooth speaker · separate surface</option><option value="phone-speaker">iPhone speaker · control run</option></select></label>
+      <label>Distance from phone (cm)<input id="speaker-distance" type="number" value="20" min="0" max="500" step="1" inputmode="decimal"></label>
+      <label>Speaker volume note<input id="speaker-volume" type="text" value="50%" maxlength="60" placeholder="e.g. 50% on the speaker"></label>
+    </div>
+    <div id="speech-file-panel" hidden><label class="file-label">Choose a speech clip · up to 90 seconds, 20 MB<input id="speech-file" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.aiff"></label><label class="transcript-label">What does your clip say? (optional reference)<textarea id="reference-transcript" rows="2" maxlength="3000" placeholder="The known words, for later comparison"></textarea></label></div>
+    <p id="stimulus-info" class="note" role="status">Five tones: 20, 40, 80, 160, and 320 Hz, with pauses. Some speakers may not reproduce the lowest tones.</p>
+    <div class="setup-actions"><button id="check-output">Check speaker output ↗</button><button id="stop-preview" hidden>Stop preview ■</button></div>
+    <p id="speaker-message" class="note" role="status">Confirm the preview comes from your intended speaker. Safari cannot verify the output route.</p>
+  </section>
   <section class="instrument" aria-label="Vibration recorder">
     <div class="instrument-top"><span id="status" class="status" role="status">● SENSOR OFF</span><span id="clock">00:00.0</span></div>
     <div id="guide-live" class="guide-live" hidden><div><strong id="guide-title">Hands off. Let it settle.</strong><span id="guide-time"></span></div><p id="guide-copy">Leave the phone still for 5 seconds.</p></div>
     <div class="readout"><div><span class="label">MOVEMENT FROM BASELINE</span><p><span id="amplitude">—</span><small>m/s²</small></p></div><div class="signal-glyph" aria-hidden="true">↟</div></div>
     <div class="plot"><canvas id="graph" aria-label="Live graph of movement magnitude over the last eight seconds"></canvas><div id="empty-graph">The quiet before the signal.</div><div class="plot-labels"><span id="scale">0.020 m/s²</span><span>LAST 8 SECONDS</span></div></div>
     <div class="metrics"><div><span class="label">DELIVERY RATE</span><strong id="rate">— <small>Hz</small></strong></div><div><span class="label">READINGS</span><strong id="count">0</strong></div><div><span class="label">PEAK*</span><strong id="peak">— <small>m/s²</small></strong></div></div>
-    <div class="actions"><button id="connect" class="primary">Enable motion <span aria-hidden="true">↗</span></button><button id="record" class="primary" disabled>Start recording <span class="record-dot" aria-hidden="true"></span></button><button id="stop" class="stop" hidden>Stop &amp; save <span aria-hidden="true">■</span></button></div>
+    <div class="actions"><button id="connect" class="primary">Enable motion <span aria-hidden="true">↗</span></button><button id="speaker-start" class="primary" disabled>Start speaker test <span class="record-dot" aria-hidden="true"></span></button><button id="record" class="primary" disabled hidden>Start recording <span class="record-dot" aria-hidden="true"></span></button><button id="stop" class="stop" hidden>Stop &amp; save <span aria-hidden="true">■</span></button></div>
     <p id="message" class="message" role="status">Open in Safari on your iPhone. Tap Enable motion, then Allow.</p>
   </section>
-  <section class="test-panel">
+  <section id="tap-panel" class="test-panel" hidden>
     <div class="section-line"><h2>The table test</h2><label class="switch"><input id="guided" type="checkbox" checked><span>Guided · 45 sec</span></label></div>
     <div class="current-step"><span id="step-number">01</span><div><h3 id="step-title">Set your phone down.</h3><p id="step-copy">Screen facing up, with stable contact on the table. Keep this page visible.</p></div><span id="step-time"></span></div>
     <ol class="steps"><li><b>00–05s</b><span>Hands off. Let it settle.</span></li><li><b>05–15s</b><span>Leave the table completely still.</span></li><li><b>15–25s</b><span>Tap lightly, about 20 cm away. Space taps apart.</span></li><li><b>25–35s</b><span>Make a few firmer taps at the same distance.</span></li><li><b>35–45s</b><span>Gently press the phone down, then release.</span></li></ol>
@@ -32,11 +49,20 @@
   <section id="saved-panel" class="saved-panel" hidden>
     <div class="section-line"><h2>Your recording</h2><span class="saved-tag">ON THIS PHONE</span></div>
     <p id="saved-summary"></p><p id="saved-note" class="note"></p>
+    <div id="speaker-report" hidden>
+      <h3 id="report-title">Speaker signal report</h3><p id="report-verdict" class="note"></p>
+      <div class="report-metrics"><div><span>PLAYBACK / QUIET</span><strong id="report-ratio">—</strong></div><div><span>ENVELOPE MATCH*</span><strong id="report-match">—</strong></div><div><span>MEASURED BAND*</span><strong id="report-band">—</strong></div></div>
+      <p id="report-warnings" class="note"></p>
+      <div class="spectrum-wrap"><canvas id="spectrum" aria-label="Relative frequency power of the strongest recorded sensor channel during playback"></canvas><p id="spectrum-caption" class="note"></p></div>
+      <details><summary>Raw channel comparison <span aria-hidden="true">+</span></summary><div class="table-scroll"><table><thead><tr><th>Channel</th><th>Quiet RMS</th><th>Playback RMS</th><th>Change</th></tr></thead><tbody id="channel-rows"></tbody></table></div></details>
+      <p class="note">* Envelope match compares loudness patterns, with a delay search. It is not word recognition or a confidence score. Frequencies are observed sensor frequencies and may contain aliases. Movement and touching can also produce a signal.</p>
+    </div>
     <div class="exports"><button id="export-json">Share / save JSON <span aria-hidden="true">↗</span></button><button id="export-csv">Save CSV <span aria-hidden="true">↓</span></button></div>
     <a id="download-fallback" hidden>Download recording</a><p id="export-message" class="note" role="status"></p>
     <button id="discard" class="text-button">Delete this recording</button>
   </section>
-  <details><summary>What is actually being measured? <span aria-hidden="true">+</span></summary><div class="details-copy"><p>Safari supplies accelerometer and rotation readings. We save each delivered motion event with its time, acceleration, acceleration including gravity, rotation, and current test step. The graph shows acceleration relative to the starting baseline; tilting or picking up the phone also changes it.</p><p>* Peak excludes the first 5 seconds of a recording. The delivery rate is measured from incoming events, not a promised hardware rate. Tiny or very fast vibrations may be missed. A flat graph does not prove that the table did not vibrate.</p><p>Recording runs while this page is visible. Switching apps or locking the screen stops the session. A gap of more than 3 seconds without usable readings also stops it. Free recording is limited to 10 minutes.</p><p>No microphone, camera, or accessibility access. Recordings stay in this browser until you explicitly share them. The latest finished recording is stored locally when browser storage is available; export it before clearing browser data.</p></div></details>
+  <section id="speaker-history" class="speaker-history" hidden><div class="section-line"><h2>Compare your runs</h2><button id="export-bundle" class="text-button">Share all runs ↗</button></div><p id="comparison-note" class="note"></p><div class="table-scroll"><table><thead><tr><th>Placement</th><th>Sound</th><th>Rate</th><th>Change*</th></tr></thead><tbody id="history-rows"></tbody></table></div><p class="note">Change uses each run’s strongest channel. Export all runs to compare the same axes. The most recent 8 speaker runs are kept in this browser when storage is available.</p><button id="clear-runs" class="text-button">Delete all speaker runs</button></section>
+  <details><summary>What is actually being measured? <span aria-hidden="true">+</span></summary><div class="details-copy"><p>Safari supplies accelerometer and rotation readings. We save each delivered motion event with its time, acceleration, acceleration including gravity, rotation, and current test step. The graph shows acceleration relative to the starting baseline; tilting or picking up the phone also changes it.</p><p>* Peak excludes the first 5 seconds of a recording. The delivery rate is measured from incoming events, not a promised hardware rate. Tiny or very fast vibrations may be missed. A flat graph does not prove that the table did not vibrate.</p><p>Speaker tests play known tones or your local audio file after 10 seconds of quiet, followed by 10 more seconds of quiet. Bluetooth introduces output delay; timestamps describe scheduled browser playback, not measured arrival at the speaker. The analysis compares signed raw sensor channels with the reference sound’s amplitude envelope. It does not recover spoken words.</p><p>Recording runs while this page is visible. Switching apps or locking the screen stops the session and playback. A gap of more than 3 seconds without usable readings also stops it. Free recording is limited to 10 minutes.</p><p>No microphone, camera, or accessibility access. Audio files are processed locally; no audio or sensor data is uploaded automatically. Recordings stay in this browser until you explicitly share them. Export before clearing browser data.</p></div></details>
   <footer><span>TABLE SIGNAL / PHONE MOTION STUDY</span><span>No app installation needed.</span></footer>
 </main>
 </body>

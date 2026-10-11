@@ -19,9 +19,9 @@
     const now=performance.now(),elapsed=current?now-current.start_monotonic_ms:0;
     const sample=S.normalize(e,elapsed,now);if(!sample)return;
     clearTimeout(startTimer);lastArrival=now;latest=sample;
-    if(!enabled){enabled=true;connecting=false;ui.connect.hidden=true;ui.record.disabled=false;status('LIVE SENSOR','live');message('Motion is connected. Set the phone down, then start recording.');}
+    if(!enabled){enabled=true;connecting=false;ui.connect.hidden=true;ui.record.disabled=false;status('LIVE SENSOR','live');message('Motion is connected. Set the phone down, then start recording.');window.SpeakerUI?.sync();}
     const value=movement(sample,current?elapsed<5000:!baseline);
-    if(current){sample.phase=S.phase(elapsed/1000,current.guided);current.samples.push(sample);if(elapsed>=5000)peak=Math.max(peak,value);}
+    if(current){sample.phase=current.experiment?window.TableExperiment.stage(current.experiment,elapsed).key:S.phase(elapsed/1000,current.guided);current.samples.push(sample);if(elapsed>=5000)peak=Math.max(peak,value);}
     live.push(sample);while(live.length&&live[0].received_at_ms<now-8000)live.shift();
     if(current&&(elapsed>=MAX_MS||current.samples.length>=MAX_SAMPLES))stop('Recording limit reached.');
     if(!chartFrame)chartFrame=requestAnimationFrame(()=>{chartFrame=0;render();});
@@ -42,33 +42,36 @@
     }catch(error){connecting=false;ui.connect.disabled=false;status('PERMISSION NEEDED','error');message(error.message);}
   }
   async function requestWake(){try{if(navigator.wakeLock&&!document.hidden)wakeLock=await navigator.wakeLock.request('screen');}catch{}if(!current&&wakeLock){wakeLock.release().catch(()=>{});wakeLock=null;}}
-  function start(){
+  function start(options={}){
     if(!enabled||performance.now()-lastArrival>2000){message('No fresh sensor readings. Enable motion again before recording.');return;}
     if(current)return;resetBaseline();live=[];
-    current={schema_version:1,started_at:new Date().toISOString(),start_monotonic_ms:performance.now(),guided:ui.guided.checked,user_agent:navigator.userAgent,units:{acceleration:'m/s²',rotation_rate:'degrees/second',time:'milliseconds'},samples:[]};
+    current={schema_version:2,started_at:new Date().toISOString(),start_monotonic_ms:performance.now(),guided:options.experiment?false:ui.guided.checked,user_agent:navigator.userAgent,units:{acceleration:'m/s²',rotation_rate:'degrees/second',time:'milliseconds'},samples:[],...(options.experiment?{experiment:options.experiment}:{})};
     ui.record.hidden=true;ui.stop.hidden=false;ui.guided.disabled=true;ui.count.textContent='0';ui.peak.textContent='—';ui['saved-panel'].hidden=true;
-    ui['guide-live'].hidden=false;status('RECORDING','recording');message('All delivered readings are being saved. Leave the phone still for 5 seconds.');requestWake();render();document.querySelector('.instrument').scrollIntoView({behavior:'smooth',block:'start'});
+    ui['guide-live'].hidden=false;status('RECORDING','recording');message('All delivered readings are being saved. Leave the phone still for 5 seconds.');requestWake();window.SpeakerUI?.sync();render();document.querySelector('.instrument').scrollIntoView({behavior:'smooth',block:'start'});return current;
   }
   function stop(reason='Stopped by you.'){
     if(!current)return;
     const session=current;current=null;
     session.duration_ms=performance.now()-session.start_monotonic_ms;session.ended_at=new Date().toISOString();session.stop_reason=reason;session.baseline={...baseline};session.baseline_method=baselineMethod;session.peak_after_settling_m_s2=peak;session.statistics=S.statistics(session.samples);
+    if(session.experiment){window.SpeakerUI?.cancelPlayback();session.analysis=window.TableExperiment.analyze(session);}
     session.notes=['Browser-delivered motion events only; not a complete measurement of every physical vibration.','Graph magnitude is relative to a baseline estimated during the first 5 seconds. Tilt also changes the signal.','Every usable delivered event is saved without a movement threshold. Missing sensor components are null.','Peak excludes settling. Graph baseline and peak are not calibrated laboratory measurements.'];
     saved=session;ui['guide-live'].hidden=true;ui.stop.hidden=true;ui.record.hidden=false;ui.record.textContent='Record again ↗';ui.guided.disabled=false;status(enabled?'LIVE SENSOR':'SENSOR PAUSED',enabled?'live':'');message(reason+' Your recording is ready to export.');
     ui.clock.textContent=clock(session.duration_ms);ui['step-title'].textContent='Recording finished.';ui['step-copy'].textContent='Export the readings below, or run another test.';ui['step-time'].textContent='';
-    if(wakeLock){wakeLock.release().catch(()=>{});wakeLock=null;}showSaved();persist(session);
+    if(wakeLock){wakeLock.release().catch(()=>{});wakeLock=null;}showSaved();persist(session);window.SpeakerUI?.stopped(session);window.SpeakerUI?.sync();
   }
   function showSaved(){
     if(!saved)return;ui['saved-panel'].hidden=false;const stats=saved.statistics;
     ui['saved-summary'].textContent=`${saved.samples.length.toLocaleString()} readings · ${(saved.duration_ms/1000).toFixed(1)} seconds · ${stats.rate_hz?.toFixed(1)??'—'} Hz average`;
     ui['saved-note'].textContent=`${saved.stop_reason} ${stats.gaps.length?`${stats.gaps.length} delivery gap(s) detected; see JSON for timing.`:'No large delivery gaps detected.'} Raw readings are included in both exports.`;
     ui['export-message'].textContent='';ui['download-fallback'].hidden=true;
+    window.SpeakerUI?.showReport(saved);
   }
   function render(){
     if(latest)ui.amplitude.textContent=latest.movement_m_s2.toFixed(3);
     const stats=S.statistics(live);ui.rate.textContent=stats.rate_hz?stats.rate_hz.toFixed(1)+' Hz':'— Hz';
     if(current){const elapsed=performance.now()-current.start_monotonic_ms;ui.clock.textContent=clock(elapsed);ui.count.textContent=current.samples.length.toLocaleString();ui.peak.textContent=elapsed<5000?'—':peak.toFixed(3);
-      if(current.guided){const idx=S.phases.findIndex(p=>elapsed/1000>=p.start&&elapsed/1000<p.end);if(idx>=0){const p=S.phases[idx];ui['step-number'].textContent=String(idx+1).padStart(2,'0');ui['step-title'].textContent=p.title;ui['step-copy'].textContent=p.copy;ui['step-time'].textContent=Math.ceil(p.end-elapsed/1000)+'s';}}
+      if(current.experiment){const p=window.TableExperiment.stage(current.experiment,elapsed);ui['step-number'].textContent='↟';ui['step-title'].textContent=p.title;ui['step-copy'].textContent=p.copy;ui['step-time'].textContent=Math.max(0,Math.ceil((p.ends-elapsed)/1000))+'s';}
+      else if(current.guided){const idx=S.phases.findIndex(p=>elapsed/1000>=p.start&&elapsed/1000<p.end);if(idx>=0){const p=S.phases[idx];ui['step-number'].textContent=String(idx+1).padStart(2,'0');ui['step-title'].textContent=p.title;ui['step-copy'].textContent=p.copy;ui['step-time'].textContent=Math.ceil(p.end-elapsed/1000)+'s';}}
       else{ui['step-number'].textContent='↟';ui['step-title'].textContent=elapsed<5000?'Hands off. Let it settle.':'Free recording.';ui['step-copy'].textContent=elapsed<5000?'The first 5 seconds set the graph baseline.':'Try different taps and distances. Stop when you’re done.';ui['step-time'].textContent='';}
       ui['guide-title'].textContent=ui['step-title'].textContent;ui['guide-copy'].textContent=ui['step-copy'].textContent;ui['guide-time'].textContent=ui['step-time'].textContent;
       if(elapsed>=5000)message('Recording every delivered reading. Keep Safari visible and the phone in place.');
@@ -95,16 +98,19 @@
     if(format==='json'&&navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file],title:'Table Signal recording'});ui['export-message'].textContent='Share sheet completed.';return;}catch(e){if(e.name==='AbortError'){ui['export-message'].textContent='Sharing cancelled. Your recording is still here.';return;}}}download(file);
   }
   ui.connect.addEventListener('click',connect);ui.record.addEventListener('click',start);ui.stop.addEventListener('click',()=>stop());ui['export-json'].addEventListener('click',()=>exportFile('json'));ui['export-csv'].addEventListener('click',()=>exportFile('csv'));
-  ui.discard.addEventListener('click',async()=>{saved=null;ui['saved-panel'].hidden=true;if(db){try{const tx=db.transaction('sessions','readwrite');tx.objectStore('sessions').delete('latest');}catch{}}if(downloadURL)URL.revokeObjectURL(downloadURL);downloadURL=null;});
+  function clearLatest(){window.SpeakerUI?.discard(saved);saved=null;ui['saved-panel'].hidden=true;if(db){try{const tx=db.transaction('sessions','readwrite');tx.objectStore('sessions').delete('latest');}catch{}}if(downloadURL)URL.revokeObjectURL(downloadURL);downloadURL=null;}
+  ui.discard.addEventListener('click',clearLatest);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stop('Stopped because Safari was hidden or the screen was locked.');});
   window.addEventListener('pagehide',()=>stop('Stopped because the page was left.'));
   window.addEventListener('resize',draw);
   setInterval(()=>{
     const now=performance.now();if(current&&now-lastArrival>3000)stop('Stopped because motion readings paused for more than 3 seconds.');
-    if(enabled&&now-lastArrival>3000){enabled=false;ui.record.disabled=true;ui.connect.hidden=false;ui.connect.disabled=false;connecting=false;status('SENSOR PAUSED','error');message('Motion readings paused. Your finished recording is preserved. Tap Enable motion to reconnect.');}
+    if(enabled&&now-lastArrival>3000){enabled=false;ui.record.disabled=true;ui.connect.hidden=false;ui.connect.disabled=false;connecting=false;status('SENSOR PAUSED','error');message('Motion readings paused. Your finished recording is preserved. Tap Enable motion to reconnect.');window.SpeakerUI?.sync();}
     if(current&&current.guided&&now-current.start_monotonic_ms>=45000)stop('Guided test complete.');
+    if(current?.experiment&&now-current.start_monotonic_ms>=window.TableExperiment.timing(current.experiment).finish)stop('Speaker test complete.');
     if(current&&now-current.start_monotonic_ms>=MAX_MS)stop('10-minute recording limit reached.');
-    if(current)render();
+    if(current){window.SpeakerUI?.checkPlayback();render();}
   },200);
+  window.TableRecorder={start,stop,clearLatest,isReady:()=>enabled&&performance.now()-lastArrival<2000,getCurrent:()=>current,getLatest:()=>saved,showSession:s=>{if(!current){saved=s;showSaved();}},downloadFile:download};
   restore();draw();
 })();

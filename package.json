@@ -4,7 +4,7 @@
   "private": true,
   "description": "Standalone browser-local vibration recorder for iPhone Safari",
   "scripts": {
-    "check": "node --check dist/app.js && node --check dist/signal.js",
+    "check": "node --check dist/app.js && node --check dist/signal.js && node --check dist/experiment.js && node --check dist/speaker-ui.js",
     "test": "node --test tests/*.test.cjs"
   }
 }
