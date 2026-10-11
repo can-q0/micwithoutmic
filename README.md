@@ -1,6 +1,10 @@
-# Table Signal — standalone
+# micwithoutmic
 
-A standalone, buildless web app for iPhone Safari. Plain HTML, CSS, and JavaScript; no ChatGPT Sites SDK, login, API, or hosting requirement. Host the `dist/` folder on any HTTPS static host. Vercel configuration is included.
+Record table vibrations using your iPhone's motion sensors.
+
+**[Try the live demo](https://table-signal.vercel.app)**
+
+The demo interface is called **Table Signal**. It is a standalone, buildless web app for iPhone Safari, made with plain HTML, CSS, and JavaScript. Host the `dist/` folder on any HTTPS static host. Vercel configuration is included.
 
 ## On your iPhone
 
@@ -35,3 +39,7 @@ Desktop localhost is for layout and simulated-event testing. iPhone motion acces
 Vercel: link this directory to the intended project, verify the project and team, then deploy production with `vercel deploy --prod`. Other static hosts: upload the contents of `dist/` as the website root.
 
 Web fonts load from Google Fonts and fall back to locally available fonts if unavailable. Sensor recording does not depend on the font service.
+
+## License
+
+[MIT](LICENSE) — Copyright (c) 2026 can-q0.
