@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#141a17">
+  <meta name="description" content="Record the motion reaching your phone. A private table-vibration experiment with raw sensor exports.">
+  <title>Table Signal — vibration recorder</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="signal.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<main>
+  <header><a class="wordmark" href="./" aria-label="Table Signal home"><span class="mark" aria-hidden="true">≋</span> TABLE SIGNAL</a><span class="edition">EXPERIMENT 001</span></header>
+  <section class="intro"><p class="eyebrow">YOUR TABLE. YOUR PHONE. THE SIGNAL BETWEEN.</p><h1>Feel it.<br><em>Measure it.</em></h1><p class="lede">Put your phone on the table. Record the movement that reaches it.</p></section>
+  <section class="instrument" aria-label="Vibration recorder">
+    <div class="instrument-top"><span id="status" class="status" role="status">● SENSOR OFF</span><span id="clock">00:00.0</span></div>
+    <div id="guide-live" class="guide-live" hidden><div><strong id="guide-title">Hands off. Let it settle.</strong><span id="guide-time"></span></div><p id="guide-copy">Leave the phone still for 5 seconds.</p></div>
+    <div class="readout"><div><span class="label">MOVEMENT FROM BASELINE</span><p><span id="amplitude">—</span><small>m/s²</small></p></div><div class="signal-glyph" aria-hidden="true">↟</div></div>
+    <div class="plot"><canvas id="graph" aria-label="Live graph of movement magnitude over the last eight seconds"></canvas><div id="empty-graph">The quiet before the signal.</div><div class="plot-labels"><span id="scale">0.020 m/s²</span><span>LAST 8 SECONDS</span></div></div>
+    <div class="metrics"><div><span class="label">DELIVERY RATE</span><strong id="rate">— <small>Hz</small></strong></div><div><span class="label">READINGS</span><strong id="count">0</strong></div><div><span class="label">PEAK*</span><strong id="peak">— <small>m/s²</small></strong></div></div>
+    <div class="actions"><button id="connect" class="primary">Enable motion <span aria-hidden="true">↗</span></button><button id="record" class="primary" disabled>Start recording <span class="record-dot" aria-hidden="true"></span></button><button id="stop" class="stop" hidden>Stop &amp; save <span aria-hidden="true">■</span></button></div>
+    <p id="message" class="message" role="status">Open in Safari on your iPhone. Tap Enable motion, then Allow.</p>
+  </section>
+  <section class="test-panel">
+    <div class="section-line"><h2>The table test</h2><label class="switch"><input id="guided" type="checkbox" checked><span>Guided · 45 sec</span></label></div>
+    <div class="current-step"><span id="step-number">01</span><div><h3 id="step-title">Set your phone down.</h3><p id="step-copy">Screen facing up, with stable contact on the table. Keep this page visible.</p></div><span id="step-time"></span></div>
+    <ol class="steps"><li><b>00–05s</b><span>Hands off. Let it settle.</span></li><li><b>05–15s</b><span>Leave the table completely still.</span></li><li><b>15–25s</b><span>Tap lightly, about 20 cm away. Space taps apart.</span></li><li><b>25–35s</b><span>Make a few firmer taps at the same distance.</span></li><li><b>35–45s</b><span>Gently press the phone down, then release.</span></li></ol>
+    <p class="note">The first 5 seconds set the graph’s baseline. Every available reading is recorded, including settling. A slow, steady press may produce little movement.</p>
+  </section>
+  <section id="saved-panel" class="saved-panel" hidden>
+    <div class="section-line"><h2>Your recording</h2><span class="saved-tag">ON THIS PHONE</span></div>
+    <p id="saved-summary"></p><p id="saved-note" class="note"></p>
+    <div class="exports"><button id="export-json">Share / save JSON <span aria-hidden="true">↗</span></button><button id="export-csv">Save CSV <span aria-hidden="true">↓</span></button></div>
+    <a id="download-fallback" hidden>Download recording</a><p id="export-message" class="note" role="status"></p>
+    <button id="discard" class="text-button">Delete this recording</button>
+  </section>
+  <details><summary>What is actually being measured? <span aria-hidden="true">+</span></summary><div class="details-copy"><p>Safari supplies accelerometer and rotation readings. We save each delivered motion event with its time, acceleration, acceleration including gravity, rotation, and current test step. The graph shows acceleration relative to the starting baseline; tilting or picking up the phone also changes it.</p><p>* Peak excludes the first 5 seconds of a recording. The delivery rate is measured from incoming events, not a promised hardware rate. Tiny or very fast vibrations may be missed. A flat graph does not prove that the table did not vibrate.</p><p>Recording runs while this page is visible. Switching apps or locking the screen stops the session. A gap of more than 3 seconds without usable readings also stops it. Free recording is limited to 10 minutes.</p><p>No microphone, camera, or accessibility access. Recordings stay in this browser until you explicitly share them. The latest finished recording is stored locally when browser storage is available; export it before clearing browser data.</p></div></details>
+  <footer><span>TABLE SIGNAL / PHONE MOTION STUDY</span><span>No app installation needed.</span></footer>
+</main>
+</body>
+</html>
