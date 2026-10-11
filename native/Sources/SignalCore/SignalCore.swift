@@ -85,6 +85,38 @@ struct ToneSegment: Codable {
     let durationSeconds: Double
 }
 
+enum RunRole: String, CaseIterable, Codable {
+    case sound, muted
+    var title: String { self == .sound ? "Sound on" : "Muted control" }
+    var playbackVolume: Float { self == .sound ? 1 : 0 }
+}
+
+enum ComparisonOrder: String, CaseIterable, Codable {
+    case a, b
+    var title: String { self == .a ? "Order A" : "Order B" }
+}
+
+struct ComparisonEvent: Codable {
+    let label: String
+    let tone: ToneSegment
+}
+
+enum ComparisonAudio {
+    static let duration: Double = 48
+    static func events(order: ComparisonOrder) -> [ComparisonEvent] {
+        let labels = order == .a
+            ? ["A", "B", "B", "A", "B", "A", "A", "B", "A", "B", "B", "A"]
+            : ["B", "A", "B", "A", "A", "B", "B", "A", "B", "A", "A", "B"]
+        return labels.enumerated().map { index, label in
+            ComparisonEvent(label: label, tone: ToneSegment(frequencyHz: label == "A" ? 160 : 320,
+                startSeconds: Double(index) * 4, durationSeconds: 2))
+        }
+    }
+    static func wav(order: ComparisonOrder, sampleRate: Int = 44100) -> Data {
+        ToneAudio.wav(segments: events(order: order).map(\.tone), duration: duration, sampleRate: sampleRate)
+    }
+}
+
 enum CalibrationAudio {
     static let frequencies: [Double] = [20, 30, 40, 60, 80, 120, 160]
     static var segments: [ToneSegment] {
@@ -94,6 +126,13 @@ enum CalibrationAudio {
     static let duration: Double = 28
 
     static func wav(sampleRate: Int = 44100) -> Data {
+        ToneAudio.wav(segments: segments, duration: duration, sampleRate: sampleRate)
+    }
+}
+
+enum ToneAudio {
+    static func wav(segments: [ToneSegment], duration: Double, sampleRate: Int) -> Data {
+        precondition(sampleRate > 0 && duration > 0)
         let count = sampleRate * Int(duration), byteCount = count * 2
         var data = Data()
         func ascii(_ text: String) { data.append(contentsOf: text.utf8) }
@@ -106,10 +145,18 @@ enum CalibrationAudio {
         ascii("RIFF"); u32(UInt32(36 + byteCount)); ascii("WAVEfmt ")
         u32(16); u16(1); u16(1); u32(UInt32(sampleRate)); u32(UInt32(sampleRate * 2))
         u16(2); u16(16); ascii("data"); u32(UInt32(byteCount))
+        var index = 0
         for i in 0..<count {
-            let time = Double(i) / Double(sampleRate), block = Int(time / 4), local = time.truncatingRemainder(dividingBy: 4)
-            let ramp = max(0, min(1, min(local / 0.025, (2 - local) / 0.025)))
-            let sample = local < 2 ? 0.2 * ramp * sin(2 * .pi * frequencies[block] * local) : 0
+            let time = Double(i) / Double(sampleRate)
+            while index < segments.count && time >= segments[index].startSeconds + segments[index].durationSeconds { index += 1 }
+            var sample = 0.0
+            if index < segments.count {
+                let segment = segments[index], local = time - segment.startSeconds
+                if local >= 0 {
+                    let ramp = max(0, min(1, min(local / 0.025, (segment.durationSeconds - local) / 0.025)))
+                    sample = 0.2 * ramp * sin(2 * .pi * segment.frequencyHz * local)
+                }
+            }
             u16(UInt16(bitPattern: Int16(sample * Double(Int16.max))))
         }
         return data

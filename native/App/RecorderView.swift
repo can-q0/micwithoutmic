@@ -16,6 +16,8 @@ struct RecorderView: View {
     @State private var distance = 5.0
     @State private var rate = 200.0
     @State private var transcript = ""
+    @State private var role: RunRole = .sound
+    @State private var order: ComparisonOrder = .a
     private let ink = Color(red: 0.10, green: 0.19, blue: 0.16)
     private let paper = Color(red: 0.96, green: 0.95, blue: 0.91)
 
@@ -24,20 +26,32 @@ struct RecorderView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("EXPERIMENT 003 · NATIVE SENSORS")
+                        Text("EXPERIMENT 005 · MOTION ONLY")
                             .font(.system(.caption, design: .monospaced)).tracking(1)
                         Text("Follow the signal.")
                             .font(.system(size: 36, weight: .bold, design: .rounded))
-                        Text("Raw motion + magnetic field. Playback stays inside this app. No microphone.")
+                        Text("Raw acceleration + rotation. No camera or microphone access. Sounds are speaker playback only.")
                             .font(.subheadline)
+                        Text("First test: Sound on / Order A → Sound on / Order B → Muted control / Order A. Same position, volume, and rate. Each run lasts 68 seconds.")
+                            .font(.caption)
                     }
                     VStack(alignment: .leading, spacing: 12) {
                         Text("1 · Choose your sound").font(.headline)
                         Text(recorder.stimulusName).font(.subheadline)
                         HStack {
+                            Button("Two-sound test") { recorder.useComparison(order) }
                             Button("Calibration tones") { recorder.useTones() }
-                            Button("Import speech") { importing = true }
                         }.buttonStyle(.bordered).disabled(recorder.recording)
+                        if recorder.isComparison {
+                            Picker("Sound order", selection: $order) {
+                                ForEach(ComparisonOrder.allCases, id: \.self) { value in Text(value.title).tag(value) }
+                            }.pickerStyle(.segmented).disabled(recorder.recording)
+                                .onChange(of: order) { _, value in recorder.useComparison(value) }
+                            Text("A = 160 Hz; B = 320 Hz. Six of each, with silent pauses. Peaks may alias; matching a pattern is not word recovery.")
+                                .font(.caption)
+                        }
+                        Button("Import known audio (optional)") { importing = true }
+                            .buttonStyle(.bordered).disabled(recorder.recording)
                         if recorder.previewing {
                             Button("Stop output check") { recorder.stopPreview() }.buttonStyle(.borderedProminent)
                         } else {
@@ -50,6 +64,11 @@ struct RecorderView: View {
                     }.panel()
                     VStack(alignment: .leading, spacing: 12) {
                         Text("2 · Describe the setup").font(.headline)
+                        Picker("Recording role", selection: $role) {
+                            ForEach(RunRole.allCases, id: \.self) { value in Text(value.title).tag(value) }
+                        }.pickerStyle(.segmented)
+                        Text("Muted control uses the identical source and timing with app playback volume zero. Keep the phone's system volume unchanged.")
+                            .font(.caption)
                         Picker("Placement", selection: $placement) {
                             Text("This phone's speaker").tag("phone-speaker")
                             Text("External speaker · same table").tag("same-table")
@@ -85,13 +104,14 @@ struct RecorderView: View {
                             Button {
                                 recorder.placement = placement; recorder.distanceCM = distance
                                 recorder.requestedRateHz = rate; recorder.referenceTranscript = transcript
+                                recorder.role = role
                                 recorder.start()
                             } label: {
                                 Label("Start sensor test", systemImage: "waveform.path")
                                     .frame(maxWidth: .infinity).padding(.vertical, 8)
                             }.buttonStyle(.borderedProminent)
                         }
-                        ForEach(["accelerometer", "gyroscope", "magnetometer"], id: \.self) { name in
+                        ForEach(["accelerometer", "gyroscope"], id: \.self) { name in
                             HStack {
                                 Text(name.capitalized)
                                 Spacer()
@@ -106,6 +126,7 @@ struct RecorderView: View {
                     if !recorder.reports.isEmpty {
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Sensor report").font(.title2.bold())
+                            Text(recorder.latestRunLabel).font(.caption).textSelection(.enabled)
                             Text(recorder.latestComplete ? "Complete sequence" : "Partial sequence")
                                 .font(.subheadline.bold())
                             ForEach(recorder.reports, id: \.sensor) { report in
@@ -128,7 +149,7 @@ struct RecorderView: View {
                                     Divider()
                                 }
                             }
-                            Text("The ratio compares changing activity after removing each window's average. It is not speech confidence. Magnetic changes can come from magnets or movement; no words have been recovered.")
+                            Text("The ratio compares changing activity after removing each window's average. It is not speech confidence. No words have been recovered. Save all three runs to test the sound patterns against the muted control.")
                                 .font(.caption)
                             if let url = recorder.exportURL {
                                 Button("Share this run") { share = ExportItem(url: url) }.buttonStyle(.borderedProminent)

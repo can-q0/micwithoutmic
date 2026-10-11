@@ -1,8 +1,8 @@
-# Native sensor lab — Experiment 003
+# Motion-only test — Experiment 005
 
-This iPhone app tests a different capture path after Safari recordings delivered about 60 samples/second and only weak tone-related activity. It captures **raw accelerometer, raw gyroscope, and raw magnetometer** independently, and plays the reference sound inside the app. No microphone, camera, accessibility settings, or network service is used.
+This iPhone app records **raw accelerometer and gyroscope** streams through Core Motion, independently of screen redraws. It never requests or accesses the camera or microphone. `AVAudioSession` is configured for playback only: generated sounds go to the speaker, with no audio recording. No accessibility settings or network service is used. The only privacy usage description is Motion & Fitness.
 
-The magnetometer is an additional experimental channel for nearby magnetic changes. Speaker magnets, electronics, phone movement, and static fields can affect it; a magnetic change is not evidence of intelligible audio. This app does **not** reconstruct speech, transcribe words, or promise that a native app will solve the sensor sensitivity or bandwidth limit.
+The first experiment compares two known sounds against a muted control. This app does **not** reconstruct speech, transcribe words, or promise that a native app will solve the sensor sensitivity or bandwidth limit. A native capture is a different delivery path, not proof of a higher hardware sampling rate.
 
 ## Install on your iPhone
 
@@ -17,32 +17,39 @@ This is an Xcode source project, not a signed IPA or an App Store download. You 
 
 Apple references: [running on a device](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices), [signing and Personal Teams](https://help.apple.com/xcode/mac/current/en.lproj/dev60b6fbbc7.html), [Developer Mode](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device).
 
-## First tests
+## First test: three runs, no audio files needed
 
-1. Start with **This phone's speaker**, **Calibration tones**, and the **200 Hz probe**. Disconnect external audio devices if the route still names Bluetooth or headphones. Press **Check speaker output** and confirm the named output and audible sound. Stop the preview.
-2. Put the phone down and press **Start sensor test**. Allow motion access if prompted. Keep this app in the foreground and do not touch the phone during the 48-second sequence: 10 seconds quiet, 28 seconds calibration, 10 seconds quiet. The first 5 seconds are settling and are excluded from the quiet baseline.
-3. Inspect the **actual rate** for all three sensors, not the requested rate. Compare the per-axis activity changes. Missing sensors, gaps, partial runs, or changed output routes are exported; an incomplete run is not a successful experiment.
-4. Import the same known speech file (3–90 seconds, up to 20 MB), choose the same speaker setup, and repeat. Playback happens here: do not open voicemail or switch to another app during capture.
-5. For an external speaker, connect it before the test, select **same table** or **separate surface**, enter the actual distance, and confirm the output route with the preview. Match clip, volume, requested rate, and distance across paired runs.
-6. Use **Share all native runs** and send the JSON along with the original speech clip. Exports include the source SHA-256, duration, optional known reference words, measured audio output routes/volume/latency, independent sensor samples, and analysis. They do not embed the source audio.
+1. Open **Table Signal** on your physical iPhone. Disconnect Bluetooth/headphones. Choose **Two-sound test**, **This phone's speaker**, and **200 Hz probe**. Set a comfortable fixed system volume (around 70% is a starting point). Tap **Check speaker output**, confirm the phone speaker plays, and tap **Stop output check**.
+2. Choose **Sound on** and **Order A**. Put the phone flat on a solid table, screen facing up. Tap **Start sensor test** and leave it untouched. The first 5 seconds allow settling. Do not open another app, change volume, or lock the screen. Allow motion access if iOS asks; raw Core Motion may not show a prompt. No camera or microphone permission is needed.
+3. Wait **68 seconds** for **Complete sequence**. The app records 10 seconds quiet, plays 48 seconds of known tones, and records 10 seconds quiet. Sound A is a 160 Hz tone, Sound B is 320 Hz; each plays for 2 seconds with a 2-second pause. There are six repetitions of each. Below-Nyquist interpretation is not assumed: tones can alias or be filtered in the motion stream.
+4. Keeping the same phone position, requested rate, output route, and system volume, choose **Order B** and run another **Sound on** test. It has the same sounds in a different order, for a held-out sequence check.
+5. Choose **Muted control** and **Order A**, then run again. Do not change system volume. The app uses the identical source and schedule with its player volume set to zero. You should hear no tones during this run.
+6. Tap **Share all native runs → Save to Files** and attach `micwithoutmic-native-runs.json` here. Individual **Share this run** exports are also available. Check that all three new runs say **Complete sequence**. A partial run is retained with its reason; repeat that run using the same setup.
+
+The display reports measured sensor rates, sample counts, gaps, and per-axis activity changes. It does not label tones or words from sensor readings. Recognition will be assessed separately on new recordings against the muted control; source labels in the export are reference ground truth only.
+
+If 200 Hz requested delivers about 100 readings/s, that is a valid measurement, not a failure. To compare request settings, repeat the complete three-run set at 100 Hz. Keep those runs separate from the 200 Hz set.
+
+Optional follow-ups: calibration tones (48 seconds total), or import a known 3–90 second audio file up to 20 MB. These also support Sound on and Muted control. Do not open voicemail or play another app during capture. Bluetooth same-table/separate-surface tests remain available, but start with the phone speaker to reduce timing and placement variables.
 
 Recordings remain in the app's Documents/SensorRuns directory and are accessible in **Files → On My iPhone → Table Signal → SensorRuns**. Each run is saved as a separate JSON file; the most recent report is restored on relaunch. Delete unwanted saved runs through Files. Uninstalling the app deletes its local recordings, so export first.
 
 ## What changes from Safari
 
 - Callback delivery through one native `CMMotionManager`, on a dedicated serial operation queue. Capture does not poll the latest reading or depend on screen redraws.
-- Three separate streams with sensor timestamps and callback arrival times. The native accelerometer includes gravity in **g**, gyroscope is **rad/s**, magnetometer is **µT**. Do not directly mix these values with the browser export's m/s² and degrees/s.
+- Two separate streams with sensor timestamps and callback arrival times. The native accelerometer includes gravity in **g**, gyroscope is **rad/s**. Do not directly mix these values with the browser export's m/s² and degrees/s.
 - Requested rates of 50, 100, or 200 Hz. **200 Hz is a probe, not a promised rate.** Apple says Core Motion caps requests at the hardware's supported maximum. Measurements determine what this phone actually delivers. Apple's 800 Hz batched example concerns supported Apple Watch hardware and is not a verified iPhone mode.
-- Calibration uses 20, 30, 40, 60, 80, 120, and 160 Hz; each has a 2-second tone and a 2-second silence. Frequencies above half the measured sensor rate can alias or disappear. Digital amplitude is 0.2 with 25 ms ramps; physical loudness depends on hardware and the volume setting.
+- The default two-sound source uses two balanced, shuffled orders and a muted role. The JSON records the role, order, exact tone events, stimulus hash, and requested playback time. Muting preserves the source identity and scheduled player start; speaker output is deliberately zero.
+- Optional calibration uses 20, 30, 40, 60, 80, 120, and 160 Hz; each has a 2-second tone and a 2-second silence. Frequencies above half the measured sensor rate can alias or disappear. Digital amplitude is 0.2 with 25 ms ramps; physical loudness depends on hardware and the volume setting.
 - AVAudioPlayer schedules the sound after a quiet baseline. AVAudioSession reports the output route, hardware volume, and reported output latency. These do not measure actual acoustic arrival or Bluetooth delay.
 - Analysis centers each window independently and exports mean shifts separately. This prevents the previous separate-surface run's baseline shift from inflating the vibration ratio. Quiet baseline: 5 seconds to playback; playback: full clip including calibration pauses; final quiet: 2–10 seconds after playback. Ratio is an activity comparison, not calibrated signal-to-noise or recognition confidence.
-- Moving to the background, an audio interruption, or an output-port change stops and saves a partial run. Keeping the app open also avoids switching to voicemail mid-test.
+- Moving to the background, an audio interruption, an output-port change, a system-volume change, or stalled accelerometer delivery stops and saves a partial run. Keeping the app open also avoids switching to voicemail mid-test.
 
-References: [CMMotionManager](https://developer.apple.com/documentation/coremotion/cmmotionmanager), [raw accelerometer requests and hardware caps](https://developer.apple.com/documentation/coremotion/getting-raw-accelerometer-events), [magnetometer intervals](https://developer.apple.com/documentation/coremotion/cmmotionmanager/magnetometerupdateinterval), [Apple's batched Watch example](https://developer.apple.com/videos/play/wwdc2023/10179/).
+References: [CMMotionManager](https://developer.apple.com/documentation/coremotion/cmmotionmanager), [raw accelerometer requests and hardware caps](https://developer.apple.com/documentation/coremotion/getting-raw-accelerometer-events), [Apple's batched Watch example](https://developer.apple.com/videos/play/wwdc2023/10179/).
 
 ## Verification
 
-The signal calculations and generated WAV are in a dependency-free Swift package that can be tested on macOS:
+The signal calculations, balanced comparison orders, generated WAV frequencies/pauses, muted output gain, and camera/microphone API exclusions are in a dependency-free Swift package that can be tested on macOS:
 
 ```sh
 swift test --package-path native

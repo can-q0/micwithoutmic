@@ -15,7 +15,7 @@ struct AudioRoute: Codable {
 }
 
 struct NativeSession: Codable {
-    let schemaVersion = 3
+    let schemaVersion = 4
     let kind = "native-sensor-session"
     let startedAt: String
     let durationSeconds: Double
@@ -31,6 +31,11 @@ struct NativeSession: Codable {
     let stimulusSHA256: String
     let stimulusDurationSeconds: Double
     let referenceTranscript: String
+    let role: RunRole?
+    let comparisonOrder: ComparisonOrder?
+    let comparisonEvents: [ComparisonEvent]?
+    let microphoneRequested = false
+    let cameraRequested = false
     let toneSegments: [ToneSegment]?
     let playbackStartSeconds: Double
     let scheduledAudioDeviceTime: Double
@@ -39,14 +44,14 @@ struct NativeSession: Codable {
     let reports: [SensorReport]
     let samples: [String: [SensorSample]]
     let notes = [
-        "Microphone is never requested or recorded. No sensor data is uploaded.",
-        "Accelerometer includes gravity in g; gyro is rad/s; magnetic field is microtesla.",
+        "Camera and microphone are never requested or accessed. Audio is playback only; no sensor data is uploaded.",
+        "Accelerometer includes gravity in g; gyro is rad/s.",
         "Each sensor has its own timestamped stream. Streams are not assumed simultaneous.",
         "Sensor and callback times are seconds since capture start, using the boot clock.",
         "Requested rate is a probe, not a guaranteed hardware rate. Inspect measuredRateHz.",
         "Playback timing is scheduled, not measured acoustic arrival at an external speaker.",
         "RMS is centered within each window; DC shifts are exported separately.",
-        "Magnetometer changes can reflect nearby magnets, device motion, or speaker electronics; they are not proof of sound or decoded words.",
+        "Tone frequencies can alias at the measured motion sampling rate; a motion peak does not identify the original acoustic frequency.",
         "No speech recognition or reconstructed audio is produced. Reference text is supplied by the user."
     ]
 }
@@ -63,7 +68,7 @@ private final class CaptureStore {
     func begin(_ token: UUID, at time: Double) {
         lock.lock(); defer { lock.unlock() }
         self.token = token; startTime = time
-        rows = ["accelerometer": [], "gyroscope": [], "magnetometer": []]; errors = []
+        rows = ["accelerometer": [], "gyroscope": []]; errors = []
     }
 
     func add(_ name: String, token: UUID, timestamp: Double, x: Double, y: Double, z: Double) {
@@ -96,13 +101,16 @@ private final class CaptureStore {
 final class NativeRecorder: ObservableObject {
     @Published private(set) var recording = false
     @Published private(set) var elapsed: Double = 0
-    @Published private(set) var message = "Import a clip or use calibration tones."
+    @Published private(set) var message = "Run Sound on / Order A, Sound on / Order B, then Muted control / Order A."
     @Published private(set) var routeDescription = "Output route appears when playback starts."
     @Published private(set) var liveCounts: [String: Int] = [:]
     @Published private(set) var reports: [SensorReport] = []
     @Published private(set) var exportURL: URL?
-    @Published private(set) var stimulusName = "Calibration tones · 28 seconds"
-    @Published private(set) var stimulusDuration = CalibrationAudio.duration
+    @Published private(set) var stimulusName = "Two-sound comparison · Order A · 48 seconds"
+    @Published private(set) var stimulusDuration = ComparisonAudio.duration
+    @Published private(set) var comparisonOrder: ComparisonOrder = .a
+    @Published private(set) var isComparison = true
+    @Published private(set) var latestRunLabel = ""
     @Published private(set) var previewing = false
     @Published private(set) var latestComplete = false
 
@@ -110,6 +118,7 @@ final class NativeRecorder: ObservableObject {
     var distanceCM = 5.0
     var requestedRateHz = 200.0
     var referenceTranscript = ""
+    var role: RunRole = .sound
     private let motion = CMMotionManager()
     private let queue: OperationQueue = {
         let queue = OperationQueue(); queue.name = "TableSignal.capture"
@@ -120,7 +129,8 @@ final class NativeRecorder: ObservableObject {
     private var timer: Timer?
     private var player: AVAudioPlayer?
     private var audioBytes: Data?
-    private var toneSegments: [ToneSegment]? = CalibrationAudio.segments
+    private var toneSegments: [ToneSegment]? = ComparisonAudio.events(order: .a).map(\.tone)
+    private var comparisonEvents: [ComparisonEvent]? = ComparisonAudio.events(order: .a)
     private var startTime = 0.0
     private var startedAt = ""
     private var playbackStart = 10.0
@@ -130,7 +140,7 @@ final class NativeRecorder: ObservableObject {
 
     var available: [String: Bool] {
         ["accelerometer": motion.isAccelerometerAvailable,
-         "gyroscope": motion.isGyroAvailable, "magnetometer": motion.isMagnetometerAvailable]
+         "gyroscope": motion.isGyroAvailable]
     }
     var finishTime: Double { playbackStart + stimulusDuration + 10 }
     var phase: String {
@@ -141,7 +151,7 @@ final class NativeRecorder: ObservableObject {
             if let segments = toneSegments {
                 let t = elapsed - playbackStart
                 if let segment = segments.first(where: { t >= $0.startSeconds && t < $0.startSeconds + $0.durationSeconds }) {
-                    return "Playing \(Int(segment.frequencyHz)) Hz"
+                    return role == .muted ? "Muted control · scheduled \(Int(segment.frequencyHz)) Hz" : "Playing \(Int(segment.frequencyHz)) Hz"
                 }
                 return "Pause between tones"
             }
@@ -172,8 +182,23 @@ final class NativeRecorder: ObservableObject {
     func useTones() {
         guard !recording else { return }
         stopPreview(); audioBytes = nil; toneSegments = CalibrationAudio.segments
+        comparisonEvents = nil; isComparison = false
         stimulusName = "Calibration tones · 28 seconds"; stimulusDuration = CalibrationAudio.duration
         message = "Seven tones with silent pauses. Speaker response may be weak at the lowest frequencies."
+    }
+
+    func useComparison(_ order: ComparisonOrder) {
+        guard !recording else { return }
+        stopPreview(); comparisonOrder = order; isComparison = true
+        comparisonEvents = ComparisonAudio.events(order: order)
+        toneSegments = comparisonEvents?.map(\.tone); audioBytes = nil
+        stimulusName = "Two-sound comparison · \(order.title) · 48 seconds"
+        stimulusDuration = ComparisonAudio.duration
+        message = "Sound A = 160 Hz; Sound B = 320 Hz. Six repetitions of each, separated by silence. This tests distinguishable motion, not words."
+    }
+
+    private func sourceBytes() -> Data {
+        audioBytes ?? (isComparison ? ComparisonAudio.wav(order: comparisonOrder) : CalibrationAudio.wav())
     }
 
     func loadClip(_ url: URL) {
@@ -189,6 +214,7 @@ final class NativeRecorder: ObservableObject {
             let probe = try AVAudioPlayer(data: bytes)
             guard probe.duration >= 3 && probe.duration <= 90 else { throw CaptureError.invalidClip }
             audioBytes = bytes; toneSegments = nil; stimulusName = url.lastPathComponent
+            comparisonEvents = nil; isComparison = false
             stimulusDuration = probe.duration; message = "Clip loaded locally. Playback and capture happen in this app."
         } catch { message = "Could not load clip: use a supported 3–90 second audio file, up to 20 MB." }
     }
@@ -197,9 +223,9 @@ final class NativeRecorder: ObservableObject {
         guard !recording else { return }
         do {
             stopPreview(); try configureAudio()
-            let p = try AVAudioPlayer(data: audioBytes ?? CalibrationAudio.wav())
+            let p = try AVAudioPlayer(data: sourceBytes())
             // Start at the 80 Hz passage for a more audible calibration preview.
-            if toneSegments != nil { p.currentTime = 16 }
+            if toneSegments != nil && !isComparison { p.currentTime = 16 }
             p.prepareToPlay(); player = p; previewing = p.play(); updateRoute()
             if !previewing { throw CaptureError.playbackFailed }
             message = "Check the named output route and speaker volume, then stop preview."
@@ -215,14 +241,14 @@ final class NativeRecorder: ObservableObject {
     func start() {
         guard !recording else { return }
         stopPreview()
-        guard available.values.contains(true) else { message = "No supported sensors are available on this device."; return }
+        guard motion.isAccelerometerAvailable else { message = "An accelerometer is required. Use your physical iPhone, not the simulator."; return }
         guard [50.0, 100.0, 200.0].contains(requestedRateHz), distanceCM.isFinite, distanceCM >= 0 else {
             message = "Choose a valid rate and distance."; return
         }
         do {
             try configureAudio()
-            let bytes = audioBytes ?? CalibrationAudio.wav()
-            let p = try AVAudioPlayer(data: bytes); p.prepareToPlay()
+            let bytes = sourceBytes()
+            let p = try AVAudioPlayer(data: bytes); p.volume = role.playbackVolume; p.prepareToPlay()
             player = p; startTime = ProcessInfo.processInfo.systemUptime
             startedAt = ISO8601DateFormatter().string(from: Date())
             playbackStart = ProcessInfo.processInfo.systemUptime - startTime + 10
@@ -234,7 +260,6 @@ final class NativeRecorder: ObservableObject {
             UIApplication.shared.isIdleTimerDisabled = true
             let interval = 1 / requestedRateHz
             motion.accelerometerUpdateInterval = interval; motion.gyroUpdateInterval = interval
-            motion.magnetometerUpdateInterval = interval
             let capture = store
             if motion.isAccelerometerAvailable {
                 motion.startAccelerometerUpdates(to: queue) { data, error in
@@ -248,13 +273,6 @@ final class NativeRecorder: ObservableObject {
                     if let error { capture.error("gyroscope: \(error.localizedDescription)", token: token) }
                     if let data { capture.add("gyroscope", token: token, timestamp: data.timestamp,
                         x: data.rotationRate.x, y: data.rotationRate.y, z: data.rotationRate.z) }
-                }
-            }
-            if motion.isMagnetometerAvailable {
-                motion.startMagnetometerUpdates(to: queue) { data, error in
-                    if let error { capture.error("magnetometer: \(error.localizedDescription)", token: token) }
-                    if let data { capture.add("magnetometer", token: token, timestamp: data.timestamp,
-                        x: data.magneticField.x, y: data.magneticField.y, z: data.magneticField.z) }
                 }
             }
             message = "Keep this app open and the phone still. Do not switch to voicemail."
@@ -271,9 +289,12 @@ final class NativeRecorder: ObservableObject {
         guard recording else { return }
         elapsed = ProcessInfo.processInfo.systemUptime - startTime
         let snapshot = store.snapshot(); liveCounts = snapshot.rows.mapValues(\.count)
+        if let initial = routes.first?.outputVolume, abs(AVAudioSession.sharedInstance().outputVolume - initial) > 0.005 {
+            stop("System output volume changed; keep it fixed for the comparison"); return
+        }
         if elapsed >= finishTime { stop("Sequence complete"); return }
-        if elapsed > 8 && snapshot.rows.values.allSatisfy({ $0.isEmpty }) {
-            stop("No sensor samples received; check Motion & Fitness permission"); return
+        if elapsed > 8 && elapsed - (snapshot.rows["accelerometer"]?.last?.sensorTime ?? 0) > 3 {
+            stop("Accelerometer delivery stopped; check Motion & Fitness access and keep the app open"); return
         }
         if snapshot.errors.contains(where: { $0.contains("sample limit") }) { stop("Sample limit reached"); return }
         if elapsed > playbackStart + 1 && elapsed < playbackStart + stimulusDuration - 0.5,
@@ -285,34 +306,39 @@ final class NativeRecorder: ObservableObject {
         let duration = ProcessInfo.processInfo.systemUptime - startTime
         timer?.invalidate(); timer = nil
         let snapshot = store.snapshot(ending: true)
-        motion.stopAccelerometerUpdates(); motion.stopGyroUpdates(); motion.stopMagnetometerUpdates()
+        motion.stopAccelerometerUpdates(); motion.stopGyroUpdates()
         recording = false; elapsed = duration; player?.stop(); player = nil
         UIApplication.shared.isIdleTimerDisabled = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         let end = playbackStart + stimulusDuration
-        reports = ["accelerometer", "gyroscope", "magnetometer"].map { name in
-            SignalAnalysis.report(sensor: name, unit: name == "accelerometer" ? "g" : name == "gyroscope" ? "rad/s" : "µT",
+        reports = ["accelerometer", "gyroscope"].map { name in
+            SignalAnalysis.report(sensor: name, unit: name == "accelerometer" ? "g" : "rad/s",
                 samples: snapshot.rows[name] ?? [], playbackStart: playbackStart, playbackEnd: end)
         }
         latestComplete = reason == "Sequence complete" && duration >= finishTime - 0.5
-            && snapshot.errors.isEmpty && reports.contains { !$0.axes.isEmpty && $0.finalQuietCount >= 20 }
-        let bytes = audioBytes ?? CalibrationAudio.wav()
+            && snapshot.errors.isEmpty && reports.contains { $0.sensor == "accelerometer" && !$0.axes.isEmpty
+                && $0.finalQuietCount >= 20 && $0.gapCount == 0 && $0.nonIncreasingTimestamps == 0 }
+        let savedReason = reason == "Sequence complete" && !latestComplete
+            ? "Sequence ended with incomplete or gapped accelerometer data; inspect sensor reports and errors" : reason
+        let bytes = sourceBytes()
+        latestRunLabel = "\(role.title) · \(isComparison ? comparisonOrder.title : stimulusName) · \(Int(requestedRateHz)) Hz requested"
         let session = NativeSession(startedAt: startedAt, durationSeconds: duration,
-            complete: latestComplete, stopReason: reason, placement: placement, distanceCM: distanceCM,
+            complete: latestComplete, stopReason: savedReason, placement: placement, distanceCM: distanceCM,
             requestedRateHz: requestedRateHz, sensorAvailable: available,
             device: UIDevice.current.model, systemVersion: UIDevice.current.systemVersion,
             stimulusName: stimulusName, stimulusSHA256: SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined(),
             stimulusDurationSeconds: stimulusDuration, referenceTranscript: String(referenceTranscript.prefix(3000)),
+            role: role, comparisonOrder: isComparison ? comparisonOrder : nil, comparisonEvents: comparisonEvents,
             toneSegments: toneSegments, playbackStartSeconds: playbackStart,
             scheduledAudioDeviceTime: scheduledAudioTime, routes: routes, errors: snapshot.errors,
             reports: reports, samples: snapshot.rows)
         do {
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-            let name = "native-signal-\(startedAt.replacingOccurrences(of: ":", with: "-"))-\(UUID().uuidString.prefix(6)).json"
+            let name = "native-signal-\(startedAt.replacingOccurrences(of: ":", with: "-"))-\(role.rawValue)-\(isComparison ? comparisonOrder.rawValue : "clip")-\(UUID().uuidString.prefix(6)).json"
             let url = try recordingsDirectory().appendingPathComponent(name)
             try encoder.encode(session).write(to: url, options: .atomic); exportURL = url
             message = latestComplete ? "Saved locally. Compare each sensor's actual rate and activity; no words have been decoded."
-                : "Partial run saved: \(reason). \(snapshot.errors.joined(separator: "; "))"
+                : "Partial run saved: \(savedReason). \(snapshot.errors.joined(separator: "; "))"
         } catch { message = "Export failed: \(error.localizedDescription). Keep this screen open; measurements remain visible." }
     }
 
@@ -369,6 +395,7 @@ final class NativeRecorder: ObservableObject {
             if let url = files.sorted(by: { $0.lastPathComponent > $1.lastPathComponent }).first {
                 let session = try JSONDecoder().decode(NativeSession.self, from: Data(contentsOf: url))
                 reports = session.reports; exportURL = url; latestComplete = session.complete
+                latestRunLabel = "\(session.role?.title ?? "Earlier run") · \(session.comparisonOrder?.title ?? session.stimulusName)"
                 message = session.complete ? "Last run restored. Raw recordings are in Files → On My iPhone → Table Signal."
                     : "Last partial run restored: \(session.stopReason)"
             }
