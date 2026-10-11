@@ -1,0 +1,32 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		CF5F248D6FFED10A32F9B8FC = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/TableSignalApp.swift"; sourceTree = SOURCE_ROOT; };
+		83FACACA57643F17135A4E56 = { isa = PBXBuildFile; fileRef = CF5F248D6FFED10A32F9B8FC; };
+		DF32722EE407C4B92192F435 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/RecorderView.swift"; sourceTree = SOURCE_ROOT; };
+		269B505570BE5FA16C48250E = { isa = PBXBuildFile; fileRef = DF32722EE407C4B92192F435; };
+		04BD2DC3715D8DBFCC941EFC = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/NativeRecorder.swift"; sourceTree = SOURCE_ROOT; };
+		E17227384C94BBC16F6AA3E6 = { isa = PBXBuildFile; fileRef = 04BD2DC3715D8DBFCC941EFC; };
+		779C0771B2781EED116F8A6A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/SignalCore/SignalCore.swift"; sourceTree = SOURCE_ROOT; };
+		DE572ACBEA1984E22037BF80 = { isa = PBXBuildFile; fileRef = 779C0771B2781EED116F8A6A; };
+		0112DAE3F84CB4DF5179BE01 = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = App/Info.plist; sourceTree = SOURCE_ROOT; };
+		38A007151ABE87CC01A5B6E9 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TableSignal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FBDC4F23F93125BBEEAE800C = { isa = PBXGroup; children = (38A007151ABE87CC01A5B6E9,); name = Products; sourceTree = "<group>"; };
+		B28B7AF69320201D1CF206EB = { isa = PBXGroup; children = (CF5F248D6FFED10A32F9B8FC, DF32722EE407C4B92192F435, 04BD2DC3715D8DBFCC941EFC, 779C0771B2781EED116F8A6A, 0112DAE3F84CB4DF5179BE01, FBDC4F23F93125BBEEAE800C,); sourceTree = "<group>"; };
+		BCE16DD0260827ECF338C787 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (83FACACA57643F17135A4E56, 269B505570BE5FA16C48250E, E17227384C94BBC16F6AA3E6, DE572ACBEA1984E22037BF80,); runOnlyForDeploymentPostprocessing = 0; };
+		7561BFB015D8F536760CB671 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		0189424A5A60FED329FA868E = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		89E1FD6268CC0F221A2BE178 = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; }; name = Debug; };
+		7082CC0B6FC1282FCEABD07A = { isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = com.canq0.micwithoutmic.SensorLab; PRODUCT_NAME = TableSignal; SWIFT_VERSION = 5.0; SWIFT_STRICT_CONCURRENCY = minimal; TARGETED_DEVICE_FAMILY = 1; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; }; name = Debug; };
+		E6DE6C99132752C914FEF632 = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; }; name = Release; };
+		639A7CA24D39909E713B47F7 = { isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = com.canq0.micwithoutmic.SensorLab; PRODUCT_NAME = TableSignal; SWIFT_VERSION = 5.0; SWIFT_STRICT_CONCURRENCY = minimal; TARGETED_DEVICE_FAMILY = 1; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; }; name = Release; };
+		65F43380A7FDA05CA228D639 = { isa = XCConfigurationList; buildConfigurations = (89E1FD6268CC0F221A2BE178, E6DE6C99132752C914FEF632,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		F5B252E79B5260B7FAA19738 = { isa = XCConfigurationList; buildConfigurations = (7082CC0B6FC1282FCEABD07A, 639A7CA24D39909E713B47F7,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		0E8A3AD980EC179856012B7E = { isa = PBXNativeTarget; buildConfigurationList = F5B252E79B5260B7FAA19738; buildPhases = (BCE16DD0260827ECF338C787, 7561BFB015D8F536760CB671, 0189424A5A60FED329FA868E,); buildRules = (); dependencies = (); name = TableSignal; productName = TableSignal; productReference = 38A007151ABE87CC01A5B6E9; productType = "com.apple.product-type.application"; };
+		98F54143AB4E86B28C3AFEE0 = { isa = PBXProject; attributes = { LastUpgradeCheck = 1600; TargetAttributes = { 0E8A3AD980EC179856012B7E = { CreatedOnToolsVersion = 16.0; }; }; }; buildConfigurationList = 65F43380A7FDA05CA228D639; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base,); mainGroup = B28B7AF69320201D1CF206EB; productRefGroup = FBDC4F23F93125BBEEAE800C; projectDirPath = ""; projectRoot = ""; targets = (0E8A3AD980EC179856012B7E,); };
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0;
+}

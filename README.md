@@ -4,6 +4,8 @@ Record table and loudspeaker vibrations using your iPhone's motion sensors.
 
 **[Try the live demo](https://table-signal.vercel.app)**
 
+**New: [native iPhone sensor lab — Experiment 003](native/README.md).** After the browser tests showed weak speaker signals at about 60 readings/second, the native experiment adds raw magnetometer capture, independent Core Motion streams, measured sensor rates, and playback inside the app. Open `native/TableSignalNative.xcodeproj` in Xcode to install on your iPhone. It is an experiment, not a working speech decoder.
+
 The demo interface is called **Table Signal**. It is a standalone, buildless web app for iPhone Safari, made with plain HTML, CSS, and JavaScript. Host the `dist/` folder on any HTTPS static host. Vercel configuration is included.
 
 ## On your iPhone
